@@ -1,4 +1,5 @@
 using System.Text;
+using System.Text.Json.Serialization;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.IdentityModel.Tokens;
 using Microsoft.OpenApi.Models;
@@ -47,7 +48,12 @@ builder.Services.AddCors(o => o.AddPolicy(CorsPolicy, p =>
 // ---- Localization scaffold (en / bn) — FR-12.2 ----
 builder.Services.AddLocalization();
 
-builder.Services.AddControllers();
+// Enums serialize as their names ("Admin", "Low", "VAT") instead of integers,
+// and incoming role/language strings are accepted and validated.
+builder.Services.AddControllers()
+    .AddJsonOptions(options =>
+        options.JsonSerializerOptions.Converters.Add(new JsonStringEnumConverter()));
+
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen(c =>
 {

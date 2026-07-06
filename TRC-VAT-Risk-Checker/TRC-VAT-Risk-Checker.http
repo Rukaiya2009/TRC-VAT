@@ -1,6 +1,0 @@
-@TRC_VAT_Risk_Checker_HostAddress = http://localhost:5236
-
-GET {{TRC_VAT_Risk_Checker_HostAddress}}/weatherforecast/
-Accept: application/json
-
-###
