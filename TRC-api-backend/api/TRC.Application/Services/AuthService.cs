@@ -27,13 +27,14 @@ public class AuthService : IAuthService
             throw new InvalidOperationException("A user with this email already exists.");
 
         var user = new User
-        {
-            Email = r.Email.Trim().ToLowerInvariant(),
-            PasswordHash = _hasher.Hash(r.Password),
-            FullName = r.FullName,
-            Role = r.Role,
-            PreferredLanguage = r.PreferredLanguage,
-        };
+{
+    Email = r.Email.Trim().ToLowerInvariant(),
+    PasswordHash = _hasher.Hash(r.Password),
+    FullName = r.FullName,
+    Role = r.Role,
+    PreferredLanguage = r.PreferredLanguage,
+    IsActive = true   // <--- ADD THIS LINE
+};
         await _users.AddAsync(user, ct);
         await _uow.SaveChangesAsync(ct);
         return await IssueAsync(user, ct);

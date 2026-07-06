@@ -1,0 +1,2 @@
+User@DESKTOP-VTKRLB5 MINGW64 /f/TRC-VAT/TRC-api-backend/api 
+cd TRC-api-backend/api 
