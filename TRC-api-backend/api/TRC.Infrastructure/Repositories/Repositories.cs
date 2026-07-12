@@ -54,6 +54,61 @@ public class UserRepository : EfRepository<User>, IUserRepository
         await Set.FirstOrDefaultAsync(u => u.Email == email, ct);
 }
 
+public class PhoneProfileRepository : EfRepository<PhoneProfile>, IPhoneProfileRepository
+{
+    public PhoneProfileRepository(AppDbContext db) : base(db) { }
+    public async Task<PhoneProfile?> GetByPhoneAsync(string normalizedPhone, CancellationToken ct = default) =>
+        await Set.FirstOrDefaultAsync(p => p.PhoneNumber == normalizedPhone, ct);
+}
+
+public class OtpCodeRepository : EfRepository<OtpCode>, IOtpCodeRepository
+{
+    public OtpCodeRepository(AppDbContext db) : base(db) { }
+
+    public async Task<OtpCode?> GetActiveAsync(Guid phoneProfileId, DateTime nowUtc, CancellationToken ct = default) =>
+        await Set.Where(o => o.PhoneProfileId == phoneProfileId
+                          && o.VerifiedAt == null
+                          && o.ExpiresAt > nowUtc)
+                 .OrderByDescending(o => o.CreatedAt)
+                 .FirstOrDefaultAsync(ct);
+
+    public async Task<int> CountSentSinceAsync(Guid phoneProfileId, DateTime sinceUtc, CancellationToken ct = default) =>
+        await Set.CountAsync(o => o.PhoneProfileId == phoneProfileId && o.CreatedAt >= sinceUtc, ct);
+}
+
+public class ConsultationDayRepository : EfRepository<ConsultationDay>, IConsultationDayRepository
+{
+    public ConsultationDayRepository(AppDbContext db) : base(db) { }
+
+    public async Task<ConsultationDay?> GetByDateAsync(DateOnly date, CancellationToken ct = default) =>
+        await Set.FirstOrDefaultAsync(d => d.Date == date, ct);
+
+    public async Task<ConsultationDay?> GetWithAppointmentsAsync(Guid id, CancellationToken ct = default) =>
+        await Set.Include(d => d.Appointments).FirstOrDefaultAsync(d => d.Id == id, ct);
+
+    public async Task<IReadOnlyList<ConsultationDay>> GetRangeAsync(DateOnly from, DateOnly to, CancellationToken ct = default) =>
+        await Set.AsNoTracking().Where(d => d.Date >= from && d.Date <= to)
+                 .OrderBy(d => d.Date).ToListAsync(ct);
+}
+
+public class AppointmentRepository : EfRepository<Appointment>, IAppointmentRepository
+{
+    public AppointmentRepository(AppDbContext db) : base(db) { }
+
+    public async Task<Appointment?> GetWithDayAsync(Guid id, CancellationToken ct = default) =>
+        await Set.Include(a => a.ConsultationDay).FirstOrDefaultAsync(a => a.Id == id, ct);
+
+    public async Task<IReadOnlyList<Appointment>> GetForPhoneAsync(Guid phoneProfileId, CancellationToken ct = default) =>
+        await Set.AsNoTracking().Include(a => a.ConsultationDay)
+                 .Where(a => a.PhoneProfileId == phoneProfileId)
+                 .ToListAsync(ct);
+
+    public async Task<IReadOnlyList<Appointment>> GetForDayAsync(Guid consultationDayId, CancellationToken ct = default) =>
+        await Set.AsNoTracking()
+                 .Where(a => a.ConsultationDayId == consultationDayId)
+                 .ToListAsync(ct);
+}
+
 public class UnitOfWork : IUnitOfWork
 {
     private readonly AppDbContext _db;

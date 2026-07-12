@@ -9,6 +9,10 @@ public class ExceptionMiddleware
     private readonly RequestDelegate _next;
     private readonly ILogger<ExceptionMiddleware> _log;
 
+    // Match the camelCase the MVC pipeline uses, so error bodies and success bodies
+    // have the same shape on the wire ({ success, data, errors, correlationId }).
+    private static readonly JsonSerializerOptions Json = new(JsonSerializerDefaults.Web);
+
     public ExceptionMiddleware(RequestDelegate next, ILogger<ExceptionMiddleware> log)
     {
         _next = next;
@@ -21,7 +25,15 @@ public class ExceptionMiddleware
         {
             await _next(ctx);
         }
-        catch (InvalidOperationException ex)   // expected domain/validation errors
+        catch (InvalidOperationException ex)      // expected domain/validation errors
+        {
+            await Write(ctx, StatusCodes.Status400BadRequest, ex.Message);
+        }
+        catch (UnauthorizedAccessException ex)    // e.g. touching another phone's booking
+        {
+            await Write(ctx, StatusCodes.Status403Forbidden, ex.Message);
+        }
+        catch (ArgumentException ex)              // e.g. unparseable phone number
         {
             await Write(ctx, StatusCodes.Status400BadRequest, ex.Message);
         }
@@ -31,7 +43,7 @@ public class ExceptionMiddleware
             _log.LogError(ex, "Unhandled exception. CorrelationId={CorrelationId}", response.CorrelationId);
             ctx.Response.StatusCode = StatusCodes.Status500InternalServerError;
             ctx.Response.ContentType = "application/json";
-            await ctx.Response.WriteAsync(JsonSerializer.Serialize(response));
+            await ctx.Response.WriteAsync(JsonSerializer.Serialize(response, Json));
         }
     }
 
@@ -39,6 +51,6 @@ public class ExceptionMiddleware
     {
         ctx.Response.StatusCode = status;
         ctx.Response.ContentType = "application/json";
-        await ctx.Response.WriteAsync(JsonSerializer.Serialize(ApiResponse<object>.Fail(message)));
+        await ctx.Response.WriteAsync(JsonSerializer.Serialize(ApiResponse<object>.Fail(message), Json));
     }
 }

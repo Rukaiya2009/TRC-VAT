@@ -30,6 +30,32 @@ public interface IUserRepository : IRepository<User>
     Task<User?> GetByEmailAsync(string email, CancellationToken ct = default);
 }
 
+public interface IPhoneProfileRepository : IRepository<PhoneProfile>
+{
+    Task<PhoneProfile?> GetByPhoneAsync(string normalizedPhone, CancellationToken ct = default);
+}
+
+public interface IOtpCodeRepository : IRepository<OtpCode>
+{
+    // Newest unverified, unexpired code for this phone.
+    Task<OtpCode?> GetActiveAsync(Guid phoneProfileId, DateTime nowUtc, CancellationToken ct = default);
+    Task<int> CountSentSinceAsync(Guid phoneProfileId, DateTime sinceUtc, CancellationToken ct = default);
+}
+
+public interface IConsultationDayRepository : IRepository<ConsultationDay>
+{
+    Task<ConsultationDay?> GetByDateAsync(DateOnly date, CancellationToken ct = default);
+    Task<ConsultationDay?> GetWithAppointmentsAsync(Guid id, CancellationToken ct = default);
+    Task<IReadOnlyList<ConsultationDay>> GetRangeAsync(DateOnly from, DateOnly to, CancellationToken ct = default);
+}
+
+public interface IAppointmentRepository : IRepository<Appointment>
+{
+    Task<Appointment?> GetWithDayAsync(Guid id, CancellationToken ct = default);
+    Task<IReadOnlyList<Appointment>> GetForPhoneAsync(Guid phoneProfileId, CancellationToken ct = default);
+    Task<IReadOnlyList<Appointment>> GetForDayAsync(Guid consultationDayId, CancellationToken ct = default);
+}
+
 // Commits changes across repositories in one transaction.
 public interface IUnitOfWork
 {

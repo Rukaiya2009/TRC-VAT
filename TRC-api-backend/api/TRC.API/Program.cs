@@ -5,6 +5,7 @@ using Microsoft.IdentityModel.Tokens;
 using Microsoft.OpenApi.Models;
 using TRC.Application.Common;
 using TRC.Application.Options;
+using TRC.API.Controllers;
 using TRC.API.Middleware;
 using TRC.Infrastructure.Auth;
 using TRC.Infrastructure.DependencyInjection;
@@ -14,6 +15,8 @@ var builder = WebApplication.CreateBuilder(args);
 // ---- Configuration-bound options (rates & gauge thresholds live in config) ----
 builder.Services.Configure<TaxRateOptions>(builder.Configuration.GetSection(TaxRateOptions.SectionName));
 builder.Services.Configure<VarianceOptions>(builder.Configuration.GetSection(VarianceOptions.SectionName));
+builder.Services.Configure<BookingOptions>(builder.Configuration.GetSection(BookingOptions.SectionName));
+builder.Services.Configure<OtpOptions>(builder.Configuration.GetSection(OtpOptions.SectionName));
 
 // ---- Application + Infrastructure layers ----
 builder.Services.AddApplication();
@@ -37,7 +40,13 @@ builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
                     ? "dev-only-insecure-key-change-me-32chars!!" : jwt.Key)),
         };
     });
-builder.Services.AddAuthorization();
+builder.Services.AddAuthorization(o =>
+{
+    // Phone tokens (minted at OTP verify) carry scope=phone and NO role claim, so they can
+    // satisfy this policy and nothing else. Staff tokens carry a role and no scope.
+    o.AddPolicy(AppointmentsController.PhonePolicy, p =>
+        p.RequireAuthenticatedUser().RequireClaim("scope", "phone"));
+});
 
 // ---- CORS (allow the Vercel frontend + local dev; preview URLs are wildcarded) ----
 const string CorsPolicy = "trc-web";

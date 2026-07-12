@@ -14,6 +14,11 @@ public static class DependencyInjection
         services.AddScoped<IRiskEngine, RiskEngine>();
         services.AddScoped<IImportService, ImportService>();
         services.AddScoped<IAuthService, AuthService>();
+        services.AddScoped<IOtpService, OtpService>();
+        services.AddScoped<IAppointmentService, AppointmentService>();
+
+        // Asia/Dhaka wall-clock — the server runs UTC, the booking rules do not.
+        services.AddSingleton<IDhakaClock, DhakaClock>();
 
         services.AddValidatorsFromAssembly(typeof(DependencyInjection).Assembly);
         return services;
