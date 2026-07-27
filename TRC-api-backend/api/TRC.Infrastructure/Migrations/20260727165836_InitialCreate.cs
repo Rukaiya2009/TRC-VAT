@@ -1,5 +1,6 @@
 ﻿using System;
 using Microsoft.EntityFrameworkCore.Migrations;
+using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 
 #nullable disable
 
@@ -14,12 +15,61 @@ namespace TRC.Infrastructure.Migrations
         protected override void Up(MigrationBuilder migrationBuilder)
         {
             migrationBuilder.CreateTable(
+                name: "AspNetRoles",
+                columns: table => new
+                {
+                    Id = table.Column<Guid>(type: "uuid", nullable: false),
+                    Name = table.Column<string>(type: "character varying(256)", maxLength: 256, nullable: true),
+                    NormalizedName = table.Column<string>(type: "character varying(256)", maxLength: 256, nullable: true),
+                    ConcurrencyStamp = table.Column<string>(type: "text", nullable: true)
+                },
+                constraints: table =>
+                {
+                    table.PrimaryKey("PK_AspNetRoles", x => x.Id);
+                });
+
+            migrationBuilder.CreateTable(
+                name: "AspNetUsers",
+                columns: table => new
+                {
+                    Id = table.Column<Guid>(type: "uuid", nullable: false),
+                    FullName = table.Column<string>(type: "character varying(200)", maxLength: 200, nullable: false),
+                    Role = table.Column<int>(type: "integer", nullable: false),
+                    PreferredLanguage = table.Column<int>(type: "integer", nullable: false),
+                    IsActive = table.Column<bool>(type: "boolean", nullable: false),
+                    CreatedAt = table.Column<DateTime>(type: "timestamp with time zone", nullable: false),
+                    LastLogin = table.Column<DateTime>(type: "timestamp with time zone", nullable: true),
+                    MissedCount = table.Column<int>(type: "integer", nullable: false),
+                    IsBlocked = table.Column<bool>(type: "boolean", nullable: false),
+                    BlockedAt = table.Column<DateTime>(type: "timestamp with time zone", nullable: true),
+                    RefreshTokenHash = table.Column<string>(type: "text", nullable: true),
+                    RefreshTokenExpiresAt = table.Column<DateTime>(type: "timestamp with time zone", nullable: true),
+                    UserName = table.Column<string>(type: "character varying(256)", maxLength: 256, nullable: true),
+                    NormalizedUserName = table.Column<string>(type: "character varying(256)", maxLength: 256, nullable: true),
+                    Email = table.Column<string>(type: "character varying(256)", maxLength: 256, nullable: true),
+                    NormalizedEmail = table.Column<string>(type: "character varying(256)", maxLength: 256, nullable: true),
+                    EmailConfirmed = table.Column<bool>(type: "boolean", nullable: false),
+                    PasswordHash = table.Column<string>(type: "text", nullable: true),
+                    SecurityStamp = table.Column<string>(type: "text", nullable: true),
+                    ConcurrencyStamp = table.Column<string>(type: "text", nullable: true),
+                    PhoneNumber = table.Column<string>(type: "text", nullable: true),
+                    PhoneNumberConfirmed = table.Column<bool>(type: "boolean", nullable: false),
+                    TwoFactorEnabled = table.Column<bool>(type: "boolean", nullable: false),
+                    LockoutEnd = table.Column<DateTimeOffset>(type: "timestamp with time zone", nullable: true),
+                    LockoutEnabled = table.Column<bool>(type: "boolean", nullable: false),
+                    AccessFailedCount = table.Column<int>(type: "integer", nullable: false)
+                },
+                constraints: table =>
+                {
+                    table.PrimaryKey("PK_AspNetUsers", x => x.Id);
+                });
+
+            migrationBuilder.CreateTable(
                 name: "BusinessPeriodData",
                 columns: table => new
                 {
                     Id = table.Column<Guid>(type: "uuid", nullable: false),
                     UserId = table.Column<Guid>(type: "uuid", nullable: true),
-                    PhoneProfileId = table.Column<Guid>(type: "uuid", nullable: true),
                     Year = table.Column<int>(type: "integer", nullable: false),
                     Month = table.Column<int>(type: "integer", nullable: false),
                     TotalSales = table.Column<decimal>(type: "numeric(18,2)", nullable: false),
@@ -57,6 +107,8 @@ namespace TRC.Infrastructure.Migrations
                     WindowStart = table.Column<TimeOnly>(type: "time without time zone", nullable: false),
                     WindowEnd = table.Column<TimeOnly>(type: "time without time zone", nullable: false),
                     BookingCutoff = table.Column<TimeOnly>(type: "time without time zone", nullable: false),
+                    SessionMinutes = table.Column<int>(type: "integer", nullable: false),
+                    BufferMinutes = table.Column<int>(type: "integer", nullable: false),
                     MaxBookings = table.Column<int>(type: "integer", nullable: false),
                     IsPublished = table.Column<bool>(type: "boolean", nullable: false),
                     TimesAssignedAt = table.Column<DateTime>(type: "timestamp with time zone", nullable: true),
@@ -88,23 +140,6 @@ namespace TRC.Infrastructure.Migrations
                 });
 
             migrationBuilder.CreateTable(
-                name: "PhoneProfiles",
-                columns: table => new
-                {
-                    Id = table.Column<Guid>(type: "uuid", nullable: false),
-                    PhoneNumber = table.Column<string>(type: "character varying(32)", maxLength: 32, nullable: false),
-                    PreferredLanguage = table.Column<int>(type: "integer", nullable: false),
-                    MissedCount = table.Column<int>(type: "integer", nullable: false),
-                    IsBlocked = table.Column<bool>(type: "boolean", nullable: false),
-                    BlockedAt = table.Column<DateTime>(type: "timestamp with time zone", nullable: true),
-                    CreatedAt = table.Column<DateTime>(type: "timestamp with time zone", nullable: false)
-                },
-                constraints: table =>
-                {
-                    table.PrimaryKey("PK_PhoneProfiles", x => x.Id);
-                });
-
-            migrationBuilder.CreateTable(
                 name: "RiskRules",
                 columns: table => new
                 {
@@ -125,99 +160,109 @@ namespace TRC.Infrastructure.Migrations
                 });
 
             migrationBuilder.CreateTable(
-                name: "Users",
+                name: "AspNetRoleClaims",
                 columns: table => new
                 {
-                    Id = table.Column<Guid>(type: "uuid", nullable: false),
-                    Email = table.Column<string>(type: "character varying(256)", maxLength: 256, nullable: false),
-                    PasswordHash = table.Column<string>(type: "text", nullable: false),
-                    FullName = table.Column<string>(type: "character varying(200)", maxLength: 200, nullable: false),
-                    Role = table.Column<int>(type: "integer", nullable: false),
-                    PreferredLanguage = table.Column<int>(type: "integer", nullable: false),
-                    IsActive = table.Column<bool>(type: "boolean", nullable: false),
-                    LastLogin = table.Column<DateTime>(type: "timestamp with time zone", nullable: true),
-                    RefreshTokenHash = table.Column<string>(type: "text", nullable: true),
-                    RefreshTokenExpiresAt = table.Column<DateTime>(type: "timestamp with time zone", nullable: true),
-                    CreatedAt = table.Column<DateTime>(type: "timestamp with time zone", nullable: false)
+                    Id = table.Column<int>(type: "integer", nullable: false)
+                        .Annotation("Npgsql:ValueGenerationStrategy", NpgsqlValueGenerationStrategy.IdentityByDefaultColumn),
+                    RoleId = table.Column<Guid>(type: "uuid", nullable: false),
+                    ClaimType = table.Column<string>(type: "text", nullable: true),
+                    ClaimValue = table.Column<string>(type: "text", nullable: true)
                 },
                 constraints: table =>
                 {
-                    table.PrimaryKey("PK_Users", x => x.Id);
-                });
-
-            migrationBuilder.CreateTable(
-                name: "Appointments",
-                columns: table => new
-                {
-                    Id = table.Column<Guid>(type: "uuid", nullable: false),
-                    ConsultationDayId = table.Column<Guid>(type: "uuid", nullable: false),
-                    PhoneProfileId = table.Column<Guid>(type: "uuid", nullable: false),
-                    BookingOrder = table.Column<int>(type: "integer", nullable: false),
-                    AssignedStart = table.Column<TimeOnly>(type: "time without time zone", nullable: true),
-                    AssignedEnd = table.Column<TimeOnly>(type: "time without time zone", nullable: true),
-                    Status = table.Column<int>(type: "integer", nullable: false),
-                    CreatedAt = table.Column<DateTime>(type: "timestamp with time zone", nullable: false)
-                },
-                constraints: table =>
-                {
-                    table.PrimaryKey("PK_Appointments", x => x.Id);
+                    table.PrimaryKey("PK_AspNetRoleClaims", x => x.Id);
                     table.ForeignKey(
-                        name: "FK_Appointments_ConsultationDays_ConsultationDayId",
-                        column: x => x.ConsultationDayId,
-                        principalTable: "ConsultationDays",
-                        principalColumn: "Id",
-                        onDelete: ReferentialAction.Cascade);
-                    table.ForeignKey(
-                        name: "FK_Appointments_PhoneProfiles_PhoneProfileId",
-                        column: x => x.PhoneProfileId,
-                        principalTable: "PhoneProfiles",
+                        name: "FK_AspNetRoleClaims_AspNetRoles_RoleId",
+                        column: x => x.RoleId,
+                        principalTable: "AspNetRoles",
                         principalColumn: "Id",
                         onDelete: ReferentialAction.Cascade);
                 });
 
             migrationBuilder.CreateTable(
-                name: "OtpCodes",
+                name: "AspNetUserClaims",
                 columns: table => new
                 {
-                    Id = table.Column<Guid>(type: "uuid", nullable: false),
-                    PhoneProfileId = table.Column<Guid>(type: "uuid", nullable: false),
-                    CodeHash = table.Column<string>(type: "text", nullable: false),
-                    ExpiresAt = table.Column<DateTime>(type: "timestamp with time zone", nullable: false),
-                    Attempts = table.Column<int>(type: "integer", nullable: false),
-                    VerifiedAt = table.Column<DateTime>(type: "timestamp with time zone", nullable: true),
-                    CreatedAt = table.Column<DateTime>(type: "timestamp with time zone", nullable: false)
+                    Id = table.Column<int>(type: "integer", nullable: false)
+                        .Annotation("Npgsql:ValueGenerationStrategy", NpgsqlValueGenerationStrategy.IdentityByDefaultColumn),
+                    UserId = table.Column<Guid>(type: "uuid", nullable: false),
+                    ClaimType = table.Column<string>(type: "text", nullable: true),
+                    ClaimValue = table.Column<string>(type: "text", nullable: true)
                 },
                 constraints: table =>
                 {
-                    table.PrimaryKey("PK_OtpCodes", x => x.Id);
+                    table.PrimaryKey("PK_AspNetUserClaims", x => x.Id);
                     table.ForeignKey(
-                        name: "FK_OtpCodes_PhoneProfiles_PhoneProfileId",
-                        column: x => x.PhoneProfileId,
-                        principalTable: "PhoneProfiles",
+                        name: "FK_AspNetUserClaims_AspNetUsers_UserId",
+                        column: x => x.UserId,
+                        principalTable: "AspNetUsers",
                         principalColumn: "Id",
                         onDelete: ReferentialAction.Cascade);
                 });
 
             migrationBuilder.CreateTable(
-                name: "QuickChecks",
+                name: "AspNetUserLogins",
                 columns: table => new
                 {
-                    Id = table.Column<Guid>(type: "uuid", nullable: false),
-                    PhoneProfileId = table.Column<Guid>(type: "uuid", nullable: true),
-                    PaymentValue = table.Column<decimal>(type: "numeric(18,2)", nullable: false),
-                    BoeValue = table.Column<decimal>(type: "numeric(18,2)", nullable: false),
-                    VariancePct = table.Column<decimal>(type: "numeric(18,2)", nullable: false),
-                    RiskBand = table.Column<int>(type: "integer", nullable: false),
-                    CreatedAt = table.Column<DateTime>(type: "timestamp with time zone", nullable: false)
+                    LoginProvider = table.Column<string>(type: "text", nullable: false),
+                    ProviderKey = table.Column<string>(type: "text", nullable: false),
+                    ProviderDisplayName = table.Column<string>(type: "text", nullable: true),
+                    UserId = table.Column<Guid>(type: "uuid", nullable: false)
                 },
                 constraints: table =>
                 {
-                    table.PrimaryKey("PK_QuickChecks", x => x.Id);
+                    table.PrimaryKey("PK_AspNetUserLogins", x => new { x.LoginProvider, x.ProviderKey });
                     table.ForeignKey(
-                        name: "FK_QuickChecks_PhoneProfiles_PhoneProfileId",
-                        column: x => x.PhoneProfileId,
-                        principalTable: "PhoneProfiles",
-                        principalColumn: "Id");
+                        name: "FK_AspNetUserLogins_AspNetUsers_UserId",
+                        column: x => x.UserId,
+                        principalTable: "AspNetUsers",
+                        principalColumn: "Id",
+                        onDelete: ReferentialAction.Cascade);
+                });
+
+            migrationBuilder.CreateTable(
+                name: "AspNetUserRoles",
+                columns: table => new
+                {
+                    UserId = table.Column<Guid>(type: "uuid", nullable: false),
+                    RoleId = table.Column<Guid>(type: "uuid", nullable: false)
+                },
+                constraints: table =>
+                {
+                    table.PrimaryKey("PK_AspNetUserRoles", x => new { x.UserId, x.RoleId });
+                    table.ForeignKey(
+                        name: "FK_AspNetUserRoles_AspNetRoles_RoleId",
+                        column: x => x.RoleId,
+                        principalTable: "AspNetRoles",
+                        principalColumn: "Id",
+                        onDelete: ReferentialAction.Cascade);
+                    table.ForeignKey(
+                        name: "FK_AspNetUserRoles_AspNetUsers_UserId",
+                        column: x => x.UserId,
+                        principalTable: "AspNetUsers",
+                        principalColumn: "Id",
+                        onDelete: ReferentialAction.Cascade);
+                });
+
+            migrationBuilder.CreateTable(
+                name: "AspNetUserTokens",
+                columns: table => new
+                {
+                    UserId = table.Column<Guid>(type: "uuid", nullable: false),
+                    LoginProvider = table.Column<string>(type: "text", nullable: false),
+                    Name = table.Column<string>(type: "text", nullable: false),
+                    Value = table.Column<string>(type: "text", nullable: true)
+                },
+                constraints: table =>
+                {
+                    table.PrimaryKey("PK_AspNetUserTokens", x => new { x.UserId, x.LoginProvider, x.Name });
+                    table.ForeignKey(
+                        name: "FK_AspNetUserTokens_AspNetUsers_UserId",
+                        column: x => x.UserId,
+                        principalTable: "AspNetUsers",
+                        principalColumn: "Id",
+                        onDelete: ReferentialAction.Cascade);
                 });
 
             migrationBuilder.CreateTable(
@@ -237,9 +282,9 @@ namespace TRC.Infrastructure.Migrations
                 {
                     table.PrimaryKey("PK_AuditLogs", x => x.Id);
                     table.ForeignKey(
-                        name: "FK_AuditLogs_Users_UserId",
+                        name: "FK_AuditLogs_AspNetUsers_UserId",
                         column: x => x.UserId,
-                        principalTable: "Users",
+                        principalTable: "AspNetUsers",
                         principalColumn: "Id");
                 });
 
@@ -270,10 +315,65 @@ namespace TRC.Infrastructure.Migrations
                 {
                     table.PrimaryKey("PK_Imports", x => x.Id);
                     table.ForeignKey(
-                        name: "FK_Imports_Users_UserId",
+                        name: "FK_Imports_AspNetUsers_UserId",
                         column: x => x.UserId,
-                        principalTable: "Users",
+                        principalTable: "AspNetUsers",
                         principalColumn: "Id");
+                });
+
+            migrationBuilder.CreateTable(
+                name: "QuickChecks",
+                columns: table => new
+                {
+                    Id = table.Column<Guid>(type: "uuid", nullable: false),
+                    UserId = table.Column<Guid>(type: "uuid", nullable: true),
+                    PaymentValue = table.Column<decimal>(type: "numeric(18,2)", nullable: false),
+                    BoeValue = table.Column<decimal>(type: "numeric(18,2)", nullable: false),
+                    VariancePct = table.Column<decimal>(type: "numeric(18,2)", nullable: false),
+                    RiskBand = table.Column<int>(type: "integer", nullable: false),
+                    CreatedAt = table.Column<DateTime>(type: "timestamp with time zone", nullable: false)
+                },
+                constraints: table =>
+                {
+                    table.PrimaryKey("PK_QuickChecks", x => x.Id);
+                    table.ForeignKey(
+                        name: "FK_QuickChecks_AspNetUsers_UserId",
+                        column: x => x.UserId,
+                        principalTable: "AspNetUsers",
+                        principalColumn: "Id");
+                });
+
+            migrationBuilder.CreateTable(
+                name: "Appointments",
+                columns: table => new
+                {
+                    Id = table.Column<Guid>(type: "uuid", nullable: false),
+                    ConsultationDayId = table.Column<Guid>(type: "uuid", nullable: false),
+                    UserId = table.Column<Guid>(type: "uuid", nullable: false),
+                    SlotIndex = table.Column<int>(type: "integer", nullable: false),
+                    BookingOrder = table.Column<int>(type: "integer", nullable: false),
+                    AssignedStart = table.Column<TimeOnly>(type: "time without time zone", nullable: true),
+                    AssignedEnd = table.Column<TimeOnly>(type: "time without time zone", nullable: true),
+                    MeetingLink = table.Column<string>(type: "text", nullable: true),
+                    Status = table.Column<int>(type: "integer", nullable: false),
+                    CancelledAt = table.Column<DateTime>(type: "timestamp with time zone", nullable: true),
+                    CreatedAt = table.Column<DateTime>(type: "timestamp with time zone", nullable: false)
+                },
+                constraints: table =>
+                {
+                    table.PrimaryKey("PK_Appointments", x => x.Id);
+                    table.ForeignKey(
+                        name: "FK_Appointments_AspNetUsers_UserId",
+                        column: x => x.UserId,
+                        principalTable: "AspNetUsers",
+                        principalColumn: "Id",
+                        onDelete: ReferentialAction.Cascade);
+                    table.ForeignKey(
+                        name: "FK_Appointments_ConsultationDays_ConsultationDayId",
+                        column: x => x.ConsultationDayId,
+                        principalTable: "ConsultationDays",
+                        principalColumn: "Id",
+                        onDelete: ReferentialAction.Cascade);
                 });
 
             migrationBuilder.CreateTable(
@@ -349,9 +449,46 @@ namespace TRC.Infrastructure.Migrations
                 column: "ConsultationDayId");
 
             migrationBuilder.CreateIndex(
-                name: "IX_Appointments_PhoneProfileId",
+                name: "IX_Appointments_UserId",
                 table: "Appointments",
-                column: "PhoneProfileId");
+                column: "UserId");
+
+            migrationBuilder.CreateIndex(
+                name: "IX_AspNetRoleClaims_RoleId",
+                table: "AspNetRoleClaims",
+                column: "RoleId");
+
+            migrationBuilder.CreateIndex(
+                name: "RoleNameIndex",
+                table: "AspNetRoles",
+                column: "NormalizedName",
+                unique: true);
+
+            migrationBuilder.CreateIndex(
+                name: "IX_AspNetUserClaims_UserId",
+                table: "AspNetUserClaims",
+                column: "UserId");
+
+            migrationBuilder.CreateIndex(
+                name: "IX_AspNetUserLogins_UserId",
+                table: "AspNetUserLogins",
+                column: "UserId");
+
+            migrationBuilder.CreateIndex(
+                name: "IX_AspNetUserRoles_RoleId",
+                table: "AspNetUserRoles",
+                column: "RoleId");
+
+            migrationBuilder.CreateIndex(
+                name: "EmailIndex",
+                table: "AspNetUsers",
+                column: "NormalizedEmail");
+
+            migrationBuilder.CreateIndex(
+                name: "UserNameIndex",
+                table: "AspNetUsers",
+                column: "NormalizedUserName",
+                unique: true);
 
             migrationBuilder.CreateIndex(
                 name: "IX_AuditLogs_UserId",
@@ -359,9 +496,9 @@ namespace TRC.Infrastructure.Migrations
                 column: "UserId");
 
             migrationBuilder.CreateIndex(
-                name: "IX_BusinessPeriodData_UserId_PhoneProfileId_Year_Month",
+                name: "IX_BusinessPeriodData_UserId_Year_Month",
                 table: "BusinessPeriodData",
-                columns: new[] { "UserId", "PhoneProfileId", "Year", "Month" },
+                columns: new[] { "UserId", "Year", "Month" },
                 unique: true);
 
             migrationBuilder.CreateIndex(
@@ -392,20 +529,9 @@ namespace TRC.Infrastructure.Migrations
                 column: "UserId");
 
             migrationBuilder.CreateIndex(
-                name: "IX_OtpCodes_PhoneProfileId",
-                table: "OtpCodes",
-                column: "PhoneProfileId");
-
-            migrationBuilder.CreateIndex(
-                name: "IX_PhoneProfiles_PhoneNumber",
-                table: "PhoneProfiles",
-                column: "PhoneNumber",
-                unique: true);
-
-            migrationBuilder.CreateIndex(
-                name: "IX_QuickChecks_PhoneProfileId",
+                name: "IX_QuickChecks_UserId",
                 table: "QuickChecks",
-                column: "PhoneProfileId");
+                column: "UserId");
 
             migrationBuilder.CreateIndex(
                 name: "IX_RiskAssessments_ImportId",
@@ -422,12 +548,6 @@ namespace TRC.Infrastructure.Migrations
                 name: "IX_TaxBreakdowns_ImportId",
                 table: "TaxBreakdowns",
                 column: "ImportId");
-
-            migrationBuilder.CreateIndex(
-                name: "IX_Users_Email",
-                table: "Users",
-                column: "Email",
-                unique: true);
         }
 
         /// <inheritdoc />
@@ -435,6 +555,21 @@ namespace TRC.Infrastructure.Migrations
         {
             migrationBuilder.DropTable(
                 name: "Appointments");
+
+            migrationBuilder.DropTable(
+                name: "AspNetRoleClaims");
+
+            migrationBuilder.DropTable(
+                name: "AspNetUserClaims");
+
+            migrationBuilder.DropTable(
+                name: "AspNetUserLogins");
+
+            migrationBuilder.DropTable(
+                name: "AspNetUserRoles");
+
+            migrationBuilder.DropTable(
+                name: "AspNetUserTokens");
 
             migrationBuilder.DropTable(
                 name: "AuditLogs");
@@ -447,9 +582,6 @@ namespace TRC.Infrastructure.Migrations
 
             migrationBuilder.DropTable(
                 name: "NotificationLogs");
-
-            migrationBuilder.DropTable(
-                name: "OtpCodes");
 
             migrationBuilder.DropTable(
                 name: "QuickChecks");
@@ -467,13 +599,13 @@ namespace TRC.Infrastructure.Migrations
                 name: "ConsultationDays");
 
             migrationBuilder.DropTable(
-                name: "PhoneProfiles");
+                name: "AspNetRoles");
 
             migrationBuilder.DropTable(
                 name: "Imports");
 
             migrationBuilder.DropTable(
-                name: "Users");
+                name: "AspNetUsers");
         }
     }
 }

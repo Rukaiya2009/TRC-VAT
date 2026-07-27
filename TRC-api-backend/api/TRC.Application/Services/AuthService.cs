@@ -10,27 +10,24 @@ namespace TRC.Application.Services;
 
 // Auth on ASP.NET Core Identity (email pivot, 26 Jul 2026).
 //   • Public register -> always Prospect, sends email-confirmation token.
-//   • Login uses SignInManager with lockoutOnFailure (5 fails -> 15 min) and blocks
+//   • Login uses UserManager lockout (5 fails -> 15 min) and blocks
 //     unconfirmed emails (RequireConfirmedEmail).
 //   • Forgot/reset + confirm use Identity's cryptographic token providers.
 //   • JWT issuance stays custom (IJwtTokenGenerator) on successful sign-in.
 public class AuthService : IAuthService
 {
     private readonly UserManager<User> _users;
-    private readonly SignInManager<User> _signin;
     private readonly IJwtTokenGenerator _jwt;
     private readonly INotificationService _notify;
     private readonly bool _devReturnTokens;
 
     public AuthService(
         UserManager<User> users,
-        SignInManager<User> signin,
         IJwtTokenGenerator jwt,
         INotificationService notify,
         IOptions<AuthDevOptions> dev)
     {
         _users = users;
-        _signin = signin;
         _jwt = jwt;
         _notify = notify;
         _devReturnTokens = dev.Value.DevReturnTokens;
@@ -69,12 +66,21 @@ public class AuthService : IAuthService
         var user = await _users.FindByEmailAsync(r.Email.Trim().ToLowerInvariant());
         if (user is null || !user.IsActive) return null;
 
-        var result = await _signin.CheckPasswordSignInAsync(user, r.Password, lockoutOnFailure: true);
-        if (result.IsLockedOut)
+        if (await _users.IsLockedOutAsync(user))
             throw new InvalidOperationException("Account locked after too many attempts. Try again in 15 minutes.");
-        if (result.IsNotAllowed)
+
+        if (!await _users.CheckPasswordAsync(user, r.Password))
+        {
+            await _users.AccessFailedAsync(user);            // increments; locks on the 5th
+            if (await _users.IsLockedOutAsync(user))
+                throw new InvalidOperationException("Account locked after too many attempts. Try again in 15 minutes.");
+            return null;
+        }
+
+        await _users.ResetAccessFailedCountAsync(user);      // clean slate on success
+
+        if (!await _users.IsEmailConfirmedAsync(user))
             throw new InvalidOperationException("Please confirm your email address before signing in.");
-        if (!result.Succeeded) return null;
 
         user.LastLogin = DateTime.UtcNow;
         await _users.UpdateAsync(user);

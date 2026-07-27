@@ -9,7 +9,6 @@ using TRC.Infrastructure.Auth;
 using TRC.Infrastructure.Notifications;
 using TRC.Infrastructure.Persistence;
 using TRC.Infrastructure.Repositories;
-using TRC.Infrastructure.Security;
 using TRC.Infrastructure.Meetings;
 
 namespace TRC.Infrastructure.DependencyInjection;
@@ -41,7 +40,6 @@ public static class DependencyInjection
         })
         .AddRoles<IdentityRole<Guid>>()
         .AddEntityFrameworkStores<AppDbContext>()
-        .AddSignInManager()
         .AddDefaultTokenProviders();
 
         // Repositories & unit of work

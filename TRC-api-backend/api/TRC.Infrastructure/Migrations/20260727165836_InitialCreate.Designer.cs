@@ -12,7 +12,7 @@ using TRC.Infrastructure.Persistence;
 namespace TRC.Infrastructure.Migrations
 {
     [DbContext(typeof(AppDbContext))]
-    [Migration("20260706045633_InitialCreate")]
+    [Migration("20260727165836_InitialCreate")]
     partial class InitialCreate
     {
         /// <inheritdoc />
@@ -24,6 +24,136 @@ namespace TRC.Infrastructure.Migrations
                 .HasAnnotation("Relational:MaxIdentifierLength", 63);
 
             NpgsqlModelBuilderExtensions.UseIdentityByDefaultColumns(modelBuilder);
+
+            modelBuilder.Entity("Microsoft.AspNetCore.Identity.IdentityRole<System.Guid>", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("ConcurrencyStamp")
+                        .IsConcurrencyToken()
+                        .HasColumnType("text");
+
+                    b.Property<string>("Name")
+                        .HasMaxLength(256)
+                        .HasColumnType("character varying(256)");
+
+                    b.Property<string>("NormalizedName")
+                        .HasMaxLength(256)
+                        .HasColumnType("character varying(256)");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("NormalizedName")
+                        .IsUnique()
+                        .HasDatabaseName("RoleNameIndex");
+
+                    b.ToTable("AspNetRoles", (string)null);
+                });
+
+            modelBuilder.Entity("Microsoft.AspNetCore.Identity.IdentityRoleClaim<System.Guid>", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("integer");
+
+                    NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<int>("Id"));
+
+                    b.Property<string>("ClaimType")
+                        .HasColumnType("text");
+
+                    b.Property<string>("ClaimValue")
+                        .HasColumnType("text");
+
+                    b.Property<Guid>("RoleId")
+                        .HasColumnType("uuid");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("RoleId");
+
+                    b.ToTable("AspNetRoleClaims", (string)null);
+                });
+
+            modelBuilder.Entity("Microsoft.AspNetCore.Identity.IdentityUserClaim<System.Guid>", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("integer");
+
+                    NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<int>("Id"));
+
+                    b.Property<string>("ClaimType")
+                        .HasColumnType("text");
+
+                    b.Property<string>("ClaimValue")
+                        .HasColumnType("text");
+
+                    b.Property<Guid>("UserId")
+                        .HasColumnType("uuid");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("UserId");
+
+                    b.ToTable("AspNetUserClaims", (string)null);
+                });
+
+            modelBuilder.Entity("Microsoft.AspNetCore.Identity.IdentityUserLogin<System.Guid>", b =>
+                {
+                    b.Property<string>("LoginProvider")
+                        .HasColumnType("text");
+
+                    b.Property<string>("ProviderKey")
+                        .HasColumnType("text");
+
+                    b.Property<string>("ProviderDisplayName")
+                        .HasColumnType("text");
+
+                    b.Property<Guid>("UserId")
+                        .HasColumnType("uuid");
+
+                    b.HasKey("LoginProvider", "ProviderKey");
+
+                    b.HasIndex("UserId");
+
+                    b.ToTable("AspNetUserLogins", (string)null);
+                });
+
+            modelBuilder.Entity("Microsoft.AspNetCore.Identity.IdentityUserRole<System.Guid>", b =>
+                {
+                    b.Property<Guid>("UserId")
+                        .HasColumnType("uuid");
+
+                    b.Property<Guid>("RoleId")
+                        .HasColumnType("uuid");
+
+                    b.HasKey("UserId", "RoleId");
+
+                    b.HasIndex("RoleId");
+
+                    b.ToTable("AspNetUserRoles", (string)null);
+                });
+
+            modelBuilder.Entity("Microsoft.AspNetCore.Identity.IdentityUserToken<System.Guid>", b =>
+                {
+                    b.Property<Guid>("UserId")
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("LoginProvider")
+                        .HasColumnType("text");
+
+                    b.Property<string>("Name")
+                        .HasColumnType("text");
+
+                    b.Property<string>("Value")
+                        .HasColumnType("text");
+
+                    b.HasKey("UserId", "LoginProvider", "Name");
+
+                    b.ToTable("AspNetUserTokens", (string)null);
+                });
 
             modelBuilder.Entity("TRC.Domain.Entities.Appointment", b =>
                 {
@@ -40,23 +170,32 @@ namespace TRC.Infrastructure.Migrations
                     b.Property<int>("BookingOrder")
                         .HasColumnType("integer");
 
+                    b.Property<DateTime?>("CancelledAt")
+                        .HasColumnType("timestamp with time zone");
+
                     b.Property<Guid>("ConsultationDayId")
                         .HasColumnType("uuid");
 
                     b.Property<DateTime>("CreatedAt")
                         .HasColumnType("timestamp with time zone");
 
-                    b.Property<Guid>("PhoneProfileId")
-                        .HasColumnType("uuid");
+                    b.Property<string>("MeetingLink")
+                        .HasColumnType("text");
+
+                    b.Property<int>("SlotIndex")
+                        .HasColumnType("integer");
 
                     b.Property<int>("Status")
                         .HasColumnType("integer");
+
+                    b.Property<Guid>("UserId")
+                        .HasColumnType("uuid");
 
                     b.HasKey("Id");
 
                     b.HasIndex("ConsultationDayId");
 
-                    b.HasIndex("PhoneProfileId");
+                    b.HasIndex("UserId");
 
                     b.ToTable("Appointments");
                 });
@@ -109,9 +248,6 @@ namespace TRC.Infrastructure.Migrations
                     b.Property<int>("Month")
                         .HasColumnType("integer");
 
-                    b.Property<Guid?>("PhoneProfileId")
-                        .HasColumnType("uuid");
-
                     b.Property<decimal>("TotalPurchases")
                         .HasColumnType("decimal(18,2)");
 
@@ -129,7 +265,7 @@ namespace TRC.Infrastructure.Migrations
 
                     b.HasKey("Id");
 
-                    b.HasIndex("UserId", "PhoneProfileId", "Year", "Month")
+                    b.HasIndex("UserId", "Year", "Month")
                         .IsUnique();
 
                     b.ToTable("BusinessPeriodData");
@@ -176,6 +312,9 @@ namespace TRC.Infrastructure.Migrations
                     b.Property<TimeOnly>("BookingCutoff")
                         .HasColumnType("time without time zone");
 
+                    b.Property<int>("BufferMinutes")
+                        .HasColumnType("integer");
+
                     b.Property<DateTime>("CreatedAt")
                         .HasColumnType("timestamp with time zone");
 
@@ -186,6 +325,9 @@ namespace TRC.Infrastructure.Migrations
                         .HasColumnType("boolean");
 
                     b.Property<int>("MaxBookings")
+                        .HasColumnType("integer");
+
+                    b.Property<int>("SessionMinutes")
                         .HasColumnType("integer");
 
                     b.Property<DateTime?>("TimesAssignedAt")
@@ -318,72 +460,6 @@ namespace TRC.Infrastructure.Migrations
                     b.ToTable("NotificationLogs");
                 });
 
-            modelBuilder.Entity("TRC.Domain.Entities.OtpCode", b =>
-                {
-                    b.Property<Guid>("Id")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("uuid");
-
-                    b.Property<int>("Attempts")
-                        .HasColumnType("integer");
-
-                    b.Property<string>("CodeHash")
-                        .IsRequired()
-                        .HasColumnType("text");
-
-                    b.Property<DateTime>("CreatedAt")
-                        .HasColumnType("timestamp with time zone");
-
-                    b.Property<DateTime>("ExpiresAt")
-                        .HasColumnType("timestamp with time zone");
-
-                    b.Property<Guid>("PhoneProfileId")
-                        .HasColumnType("uuid");
-
-                    b.Property<DateTime?>("VerifiedAt")
-                        .HasColumnType("timestamp with time zone");
-
-                    b.HasKey("Id");
-
-                    b.HasIndex("PhoneProfileId");
-
-                    b.ToTable("OtpCodes");
-                });
-
-            modelBuilder.Entity("TRC.Domain.Entities.PhoneProfile", b =>
-                {
-                    b.Property<Guid>("Id")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("uuid");
-
-                    b.Property<DateTime?>("BlockedAt")
-                        .HasColumnType("timestamp with time zone");
-
-                    b.Property<DateTime>("CreatedAt")
-                        .HasColumnType("timestamp with time zone");
-
-                    b.Property<bool>("IsBlocked")
-                        .HasColumnType("boolean");
-
-                    b.Property<int>("MissedCount")
-                        .HasColumnType("integer");
-
-                    b.Property<string>("PhoneNumber")
-                        .IsRequired()
-                        .HasMaxLength(32)
-                        .HasColumnType("character varying(32)");
-
-                    b.Property<int>("PreferredLanguage")
-                        .HasColumnType("integer");
-
-                    b.HasKey("Id");
-
-                    b.HasIndex("PhoneNumber")
-                        .IsUnique();
-
-                    b.ToTable("PhoneProfiles");
-                });
-
             modelBuilder.Entity("TRC.Domain.Entities.QuickCheck", b =>
                 {
                     b.Property<Guid>("Id")
@@ -399,18 +475,18 @@ namespace TRC.Infrastructure.Migrations
                     b.Property<decimal>("PaymentValue")
                         .HasColumnType("decimal(18,2)");
 
-                    b.Property<Guid?>("PhoneProfileId")
-                        .HasColumnType("uuid");
-
                     b.Property<int>("RiskBand")
                         .HasColumnType("integer");
+
+                    b.Property<Guid?>("UserId")
+                        .HasColumnType("uuid");
 
                     b.Property<decimal>("VariancePct")
                         .HasColumnType("decimal(18,2)");
 
                     b.HasKey("Id");
 
-                    b.HasIndex("PhoneProfileId");
+                    b.HasIndex("UserId");
 
                     b.ToTable("QuickChecks");
                 });
@@ -681,13 +757,25 @@ namespace TRC.Infrastructure.Migrations
                         .ValueGeneratedOnAdd()
                         .HasColumnType("uuid");
 
+                    b.Property<int>("AccessFailedCount")
+                        .HasColumnType("integer");
+
+                    b.Property<DateTime?>("BlockedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("ConcurrencyStamp")
+                        .IsConcurrencyToken()
+                        .HasColumnType("text");
+
                     b.Property<DateTime>("CreatedAt")
                         .HasColumnType("timestamp with time zone");
 
                     b.Property<string>("Email")
-                        .IsRequired()
                         .HasMaxLength(256)
                         .HasColumnType("character varying(256)");
+
+                    b.Property<bool>("EmailConfirmed")
+                        .HasColumnType("boolean");
 
                     b.Property<string>("FullName")
                         .IsRequired()
@@ -697,12 +785,37 @@ namespace TRC.Infrastructure.Migrations
                     b.Property<bool>("IsActive")
                         .HasColumnType("boolean");
 
+                    b.Property<bool>("IsBlocked")
+                        .HasColumnType("boolean");
+
                     b.Property<DateTime?>("LastLogin")
                         .HasColumnType("timestamp with time zone");
 
+                    b.Property<bool>("LockoutEnabled")
+                        .HasColumnType("boolean");
+
+                    b.Property<DateTimeOffset?>("LockoutEnd")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<int>("MissedCount")
+                        .HasColumnType("integer");
+
+                    b.Property<string>("NormalizedEmail")
+                        .HasMaxLength(256)
+                        .HasColumnType("character varying(256)");
+
+                    b.Property<string>("NormalizedUserName")
+                        .HasMaxLength(256)
+                        .HasColumnType("character varying(256)");
+
                     b.Property<string>("PasswordHash")
-                        .IsRequired()
                         .HasColumnType("text");
+
+                    b.Property<string>("PhoneNumber")
+                        .HasColumnType("text");
+
+                    b.Property<bool>("PhoneNumberConfirmed")
+                        .HasColumnType("boolean");
 
                     b.Property<int>("PreferredLanguage")
                         .HasColumnType("integer");
@@ -716,12 +829,77 @@ namespace TRC.Infrastructure.Migrations
                     b.Property<int>("Role")
                         .HasColumnType("integer");
 
+                    b.Property<string>("SecurityStamp")
+                        .HasColumnType("text");
+
+                    b.Property<bool>("TwoFactorEnabled")
+                        .HasColumnType("boolean");
+
+                    b.Property<string>("UserName")
+                        .HasMaxLength(256)
+                        .HasColumnType("character varying(256)");
+
                     b.HasKey("Id");
 
-                    b.HasIndex("Email")
-                        .IsUnique();
+                    b.HasIndex("NormalizedEmail")
+                        .HasDatabaseName("EmailIndex");
 
-                    b.ToTable("Users");
+                    b.HasIndex("NormalizedUserName")
+                        .IsUnique()
+                        .HasDatabaseName("UserNameIndex");
+
+                    b.ToTable("AspNetUsers", (string)null);
+                });
+
+            modelBuilder.Entity("Microsoft.AspNetCore.Identity.IdentityRoleClaim<System.Guid>", b =>
+                {
+                    b.HasOne("Microsoft.AspNetCore.Identity.IdentityRole<System.Guid>", null)
+                        .WithMany()
+                        .HasForeignKey("RoleId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+                });
+
+            modelBuilder.Entity("Microsoft.AspNetCore.Identity.IdentityUserClaim<System.Guid>", b =>
+                {
+                    b.HasOne("TRC.Domain.Entities.User", null)
+                        .WithMany()
+                        .HasForeignKey("UserId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+                });
+
+            modelBuilder.Entity("Microsoft.AspNetCore.Identity.IdentityUserLogin<System.Guid>", b =>
+                {
+                    b.HasOne("TRC.Domain.Entities.User", null)
+                        .WithMany()
+                        .HasForeignKey("UserId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+                });
+
+            modelBuilder.Entity("Microsoft.AspNetCore.Identity.IdentityUserRole<System.Guid>", b =>
+                {
+                    b.HasOne("Microsoft.AspNetCore.Identity.IdentityRole<System.Guid>", null)
+                        .WithMany()
+                        .HasForeignKey("RoleId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.HasOne("TRC.Domain.Entities.User", null)
+                        .WithMany()
+                        .HasForeignKey("UserId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+                });
+
+            modelBuilder.Entity("Microsoft.AspNetCore.Identity.IdentityUserToken<System.Guid>", b =>
+                {
+                    b.HasOne("TRC.Domain.Entities.User", null)
+                        .WithMany()
+                        .HasForeignKey("UserId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
                 });
 
             modelBuilder.Entity("TRC.Domain.Entities.Appointment", b =>
@@ -732,15 +910,15 @@ namespace TRC.Infrastructure.Migrations
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
 
-                    b.HasOne("TRC.Domain.Entities.PhoneProfile", "PhoneProfile")
+                    b.HasOne("TRC.Domain.Entities.User", "User")
                         .WithMany("Appointments")
-                        .HasForeignKey("PhoneProfileId")
+                        .HasForeignKey("UserId")
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
 
                     b.Navigation("ConsultationDay");
 
-                    b.Navigation("PhoneProfile");
+                    b.Navigation("User");
                 });
 
             modelBuilder.Entity("TRC.Domain.Entities.AuditLog", b =>
@@ -759,24 +937,13 @@ namespace TRC.Infrastructure.Migrations
                     b.Navigation("User");
                 });
 
-            modelBuilder.Entity("TRC.Domain.Entities.OtpCode", b =>
-                {
-                    b.HasOne("TRC.Domain.Entities.PhoneProfile", "PhoneProfile")
-                        .WithMany("OtpCodes")
-                        .HasForeignKey("PhoneProfileId")
-                        .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired();
-
-                    b.Navigation("PhoneProfile");
-                });
-
             modelBuilder.Entity("TRC.Domain.Entities.QuickCheck", b =>
                 {
-                    b.HasOne("TRC.Domain.Entities.PhoneProfile", "PhoneProfile")
-                        .WithMany("QuickChecks")
-                        .HasForeignKey("PhoneProfileId");
+                    b.HasOne("TRC.Domain.Entities.User", "User")
+                        .WithMany()
+                        .HasForeignKey("UserId");
 
-                    b.Navigation("PhoneProfile");
+                    b.Navigation("User");
                 });
 
             modelBuilder.Entity("TRC.Domain.Entities.RiskAssessment", b =>
@@ -813,17 +980,10 @@ namespace TRC.Infrastructure.Migrations
                     b.Navigation("TaxBreakdowns");
                 });
 
-            modelBuilder.Entity("TRC.Domain.Entities.PhoneProfile", b =>
+            modelBuilder.Entity("TRC.Domain.Entities.User", b =>
                 {
                     b.Navigation("Appointments");
 
-                    b.Navigation("OtpCodes");
-
-                    b.Navigation("QuickChecks");
-                });
-
-            modelBuilder.Entity("TRC.Domain.Entities.User", b =>
-                {
                     b.Navigation("AuditLogs");
 
                     b.Navigation("Imports");

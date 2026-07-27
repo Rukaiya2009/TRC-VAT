@@ -5,4 +5,7 @@
     <Nullable>enable</Nullable>
     <RootNamespace>TRC.Domain</RootNamespace>
   </PropertyGroup>
+  <ItemGroup>
+    <PackageReference Include="Microsoft.Extensions.Identity.Stores" Version="8.0.8" />
+  </ItemGroup>
 </Project>
