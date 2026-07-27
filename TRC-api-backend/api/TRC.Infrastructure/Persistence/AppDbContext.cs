@@ -1,16 +1,15 @@
+using Microsoft.AspNetCore.Identity;
+using Microsoft.AspNetCore.Identity.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore;
 using TRC.Domain.Entities;
 using TRC.Domain.Enums;
 
 namespace TRC.Infrastructure.Persistence;
 
-public class AppDbContext : DbContext
+public class AppDbContext : IdentityDbContext<User, IdentityRole<Guid>, Guid>
 {
     public AppDbContext(DbContextOptions<AppDbContext> options) : base(options) { }
 
-    public DbSet<User> Users => Set<User>();
-    public DbSet<PhoneProfile> PhoneProfiles => Set<PhoneProfile>();
-    public DbSet<OtpCode> OtpCodes => Set<OtpCode>();
     public DbSet<Import> Imports => Set<Import>();
     public DbSet<TaxBreakdown> TaxBreakdowns => Set<TaxBreakdown>();
     public DbSet<QuickCheck> QuickChecks => Set<QuickCheck>();

@@ -7,42 +7,39 @@ using TRC.Shared.Common;
 
 namespace TRC.API.Controllers;
 
-// M11 — booking. Prospect endpoints are gated by the phone token issued at OTP verify:
-// identity comes from the signed token, never from a phone number in the request body.
-// (Trusting a body/query phone would let anyone cancel a stranger's booking.)
+// M11 — booking. Prospect endpoints are gated by the account JWT (Prospect role); identity
+// (UserId) comes from the signed token, never from the request body.
 [ApiController]
 [Route("api/appointments")]
 public class AppointmentsController : ControllerBase
 {
-    public const string PhonePolicy = "PhoneVerified";
-
     private readonly IAppointmentService _appointments;
     public AppointmentsController(IAppointmentService appointments) => _appointments = appointments;
 
-    private Guid PhoneProfileId =>
+    private Guid UserId =>
         Guid.TryParse(User.FindFirstValue(ClaimTypes.NameIdentifier)
                       ?? User.FindFirstValue("sub"), out var id)
             ? id
-            : throw new UnauthorizedAccessException("Phone token is missing or malformed.");
+            : throw new UnauthorizedAccessException("Token is missing or malformed.");
 
     // ---------------------------------------------------------------- prospect (phone token)
 
-    [Authorize(Policy = PhonePolicy)]
+    [Authorize(Roles = "Prospect")]
     [HttpPost]
     public async Task<IActionResult> Book(BookAppointmentRequest req, CancellationToken ct)
-        => Ok(ApiResponse<AppointmentDto>.Ok(await _appointments.BookAsync(PhoneProfileId, req, ct)));
+        => Ok(ApiResponse<AppointmentDto>.Ok(await _appointments.BookAsync(UserId, req, ct)));
 
-    [Authorize(Policy = PhonePolicy)]
+    [Authorize(Roles = "Prospect")]
     [HttpGet("mine")]
     public async Task<IActionResult> Mine(CancellationToken ct)
-        => Ok(ApiResponse<IReadOnlyList<AppointmentDto>>.Ok(await _appointments.GetMineAsync(PhoneProfileId, ct)));
+        => Ok(ApiResponse<IReadOnlyList<AppointmentDto>>.Ok(await _appointments.GetMineAsync(UserId, ct)));
 
     // Cancelling does NOT count as a miss — we'd rather people cancel than no-show.
-    [Authorize(Policy = PhonePolicy)]
+    [Authorize(Roles = "Prospect")]
     [HttpDelete("{id:guid}")]
     public async Task<IActionResult> Cancel(Guid id, CancellationToken ct)
     {
-        await _appointments.CancelAsync(PhoneProfileId, id, ct);
+        await _appointments.CancelAsync(UserId, id, ct);
         return Ok(ApiResponse<object>.Ok(new { message = "Booking cancelled." }));
     }
 

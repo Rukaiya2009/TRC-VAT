@@ -47,34 +47,8 @@ public class RiskRuleRepository : EfRepository<RiskRule>, IRiskRuleRepository
         await Set.FirstOrDefaultAsync(r => r.Code == code, ct);
 }
 
-public class UserRepository : EfRepository<User>, IUserRepository
-{
-    public UserRepository(AppDbContext db) : base(db) { }
-    public async Task<User?> GetByEmailAsync(string email, CancellationToken ct = default) =>
-        await Set.FirstOrDefaultAsync(u => u.Email == email, ct);
-}
 
-public class PhoneProfileRepository : EfRepository<PhoneProfile>, IPhoneProfileRepository
-{
-    public PhoneProfileRepository(AppDbContext db) : base(db) { }
-    public async Task<PhoneProfile?> GetByPhoneAsync(string normalizedPhone, CancellationToken ct = default) =>
-        await Set.FirstOrDefaultAsync(p => p.PhoneNumber == normalizedPhone, ct);
-}
 
-public class OtpCodeRepository : EfRepository<OtpCode>, IOtpCodeRepository
-{
-    public OtpCodeRepository(AppDbContext db) : base(db) { }
-
-    public async Task<OtpCode?> GetActiveAsync(Guid phoneProfileId, DateTime nowUtc, CancellationToken ct = default) =>
-        await Set.Where(o => o.PhoneProfileId == phoneProfileId
-                          && o.VerifiedAt == null
-                          && o.ExpiresAt > nowUtc)
-                 .OrderByDescending(o => o.CreatedAt)
-                 .FirstOrDefaultAsync(ct);
-
-    public async Task<int> CountSentSinceAsync(Guid phoneProfileId, DateTime sinceUtc, CancellationToken ct = default) =>
-        await Set.CountAsync(o => o.PhoneProfileId == phoneProfileId && o.CreatedAt >= sinceUtc, ct);
-}
 
 public class ConsultationDayRepository : EfRepository<ConsultationDay>, IConsultationDayRepository
 {
@@ -98,15 +72,29 @@ public class AppointmentRepository : EfRepository<Appointment>, IAppointmentRepo
     public async Task<Appointment?> GetWithDayAsync(Guid id, CancellationToken ct = default) =>
         await Set.Include(a => a.ConsultationDay).FirstOrDefaultAsync(a => a.Id == id, ct);
 
-    public async Task<IReadOnlyList<Appointment>> GetForPhoneAsync(Guid phoneProfileId, CancellationToken ct = default) =>
+    public async Task<IReadOnlyList<Appointment>> GetForUserAsync(Guid userId, CancellationToken ct = default) =>
         await Set.AsNoTracking().Include(a => a.ConsultationDay)
-                 .Where(a => a.PhoneProfileId == phoneProfileId)
+                 .Where(a => a.UserId == userId)
                  .ToListAsync(ct);
 
     public async Task<IReadOnlyList<Appointment>> GetForDayAsync(Guid consultationDayId, CancellationToken ct = default) =>
         await Set.AsNoTracking()
                  .Where(a => a.ConsultationDayId == consultationDayId)
                  .ToListAsync(ct);
+}
+
+public class UserRepository : IUserRepository
+{
+    private readonly AppDbContext _db;
+    public UserRepository(AppDbContext db) => _db = db;
+
+    public async Task<User?> GetByIdAsync(Guid id, CancellationToken ct = default) =>
+        await _db.Users.FirstOrDefaultAsync(u => u.Id == id, ct);
+
+    public async Task<User?> GetByPhoneAsync(string normalizedPhone, CancellationToken ct = default) =>
+        await _db.Users.FirstOrDefaultAsync(u => u.PhoneNumber == normalizedPhone, ct);
+
+    public void Update(User user) => _db.Users.Update(user);
 }
 
 public class UnitOfWork : IUnitOfWork

@@ -8,8 +8,8 @@ public class Appointment : BaseEntity
 {
     public Guid ConsultationDayId { get; set; }
     public ConsultationDay ConsultationDay { get; set; } = null!;
-    public Guid PhoneProfileId { get; set; }
-    public PhoneProfile PhoneProfile { get; set; } = null!;
+    public Guid UserId { get; set; }
+    public User User { get; set; } = null!;
 
     public int SlotIndex { get; set; }              // 0-based position within the window
     public int BookingOrder { get; set; }           // order the booking arrived in

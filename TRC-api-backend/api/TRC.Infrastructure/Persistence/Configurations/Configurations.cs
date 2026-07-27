@@ -8,18 +8,7 @@ public class UserConfig : IEntityTypeConfiguration<User>
 {
     public void Configure(EntityTypeBuilder<User> e)
     {
-        e.HasIndex(u => u.Email).IsUnique();
-        e.Property(u => u.Email).HasMaxLength(256).IsRequired();
         e.Property(u => u.FullName).HasMaxLength(200).IsRequired();
-    }
-}
-
-public class PhoneProfileConfig : IEntityTypeConfiguration<PhoneProfile>
-{
-    public void Configure(EntityTypeBuilder<PhoneProfile> e)
-    {
-        e.HasIndex(p => p.PhoneNumber).IsUnique();
-        e.Property(p => p.PhoneNumber).HasMaxLength(32).IsRequired();
     }
 }
 
@@ -54,7 +43,7 @@ public class RiskRuleConfig : IEntityTypeConfiguration<RiskRule>
 public class BusinessPeriodDataConfig : IEntityTypeConfiguration<BusinessPeriodData>
 {
     public void Configure(EntityTypeBuilder<BusinessPeriodData> e) =>
-        e.HasIndex(x => new { x.UserId, x.PhoneProfileId, x.Year, x.Month }).IsUnique();
+        e.HasIndex(x => new { x.UserId, x.Year, x.Month }).IsUnique();
 }
 
 public class ConsultationDayConfig : IEntityTypeConfiguration<ConsultationDay>

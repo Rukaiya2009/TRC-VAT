@@ -19,7 +19,7 @@ public class AppointmentService : IAppointmentService
 {
     private readonly IConsultationDayRepository _days;
     private readonly IAppointmentRepository _appts;
-    private readonly IPhoneProfileRepository _phones;
+    private readonly IUserRepository _users;
     private readonly IMeetingLinkProvider _links;
     private readonly INotificationService _notify;
     private readonly IUnitOfWork _uow;
@@ -29,7 +29,7 @@ public class AppointmentService : IAppointmentService
     public AppointmentService(
         IConsultationDayRepository days,
         IAppointmentRepository appts,
-        IPhoneProfileRepository phones,
+        IUserRepository users,
         IMeetingLinkProvider links,
         INotificationService notify,
         IUnitOfWork uow,
@@ -38,7 +38,7 @@ public class AppointmentService : IAppointmentService
     {
         _days = days;
         _appts = appts;
-        _phones = phones;
+        _users = users;
         _links = links;
         _notify = notify;
         _uow = uow;
@@ -93,14 +93,17 @@ public class AppointmentService : IAppointmentService
 
     // ----------------------------------------------------------------- booking (phone token)
 
-    public async Task<AppointmentDto> BookAsync(Guid phoneProfileId, BookAppointmentRequest request, CancellationToken ct = default)
+    public async Task<AppointmentDto> BookAsync(Guid userId, BookAppointmentRequest request, CancellationToken ct = default)
     {
-        var profile = await _phones.GetByIdAsync(phoneProfileId, ct)
-            ?? throw new InvalidOperationException("Phone profile not found.");
+        var user = await _users.GetByIdAsync(userId, ct)
+            ?? throw new InvalidOperationException("User account not found.");
 
-        if (profile.IsBlocked)
+        if (!user.EmailConfirmed)
+            throw new InvalidOperationException("Please confirm your email address before booking.");
+
+        if (user.IsBlocked)
             throw new InvalidOperationException(
-                "This number has been blocked after repeated missed appointments. Please contact TRC directly.");
+                "This account has been blocked after repeated missed appointments. Please contact TRC directly.");
 
         var day = await _days.GetByIdAsync(request.ConsultationDayId, ct)
             ?? throw new InvalidOperationException("That consultation day does not exist.");
@@ -117,7 +120,7 @@ public class AppointmentService : IAppointmentService
         if (live.Any(a => a.SlotIndex == request.SlotIndex))
             throw new InvalidOperationException("That slot has just been taken. Please choose another.");
 
-        if (live.Any(a => a.PhoneProfileId == phoneProfileId))
+        if (live.Any(a => a.UserId == userId))
             throw new InvalidOperationException("You already have a booking on this day.");
 
         var (start, end) = SlotTimes(day, request.SlotIndex);
@@ -125,7 +128,7 @@ public class AppointmentService : IAppointmentService
         var appointment = new Appointment
         {
             ConsultationDayId = day.Id,
-            PhoneProfileId = phoneProfileId,
+            UserId = userId,
             SlotIndex = request.SlotIndex,
             BookingOrder = live.Count + 1,
             AssignedStart = start,
@@ -143,29 +146,29 @@ public class AppointmentService : IAppointmentService
         await _appts.AddAsync(appointment, ct);
         await _uow.SaveChangesAsync(ct);
 
-        await _notify.SendAsync(profile.PhoneNumber, Channel.WhatsApp, "BookingConfirmed", profile.PreferredLanguage, ct);
+        await _notify.SendAsync((user.PhoneNumber ?? "unknown"), Channel.WhatsApp, "BookingConfirmed", user.PreferredLanguage, ct);
 
-        return Project(appointment, day, profile.PhoneNumber);
+        return Project(appointment, day, (user.PhoneNumber ?? "unknown"));
     }
 
-    public async Task<IReadOnlyList<AppointmentDto>> GetMineAsync(Guid phoneProfileId, CancellationToken ct = default)
+    public async Task<IReadOnlyList<AppointmentDto>> GetMineAsync(Guid userId, CancellationToken ct = default)
     {
-        var profile = await _phones.GetByIdAsync(phoneProfileId, ct)
-            ?? throw new InvalidOperationException("Phone profile not found.");
+        var user = await _users.GetByIdAsync(userId, ct)
+            ?? throw new InvalidOperationException("User account not found.");
 
-        var appts = await _appts.GetForPhoneAsync(phoneProfileId, ct);
-        return appts.Select(a => Project(a, a.ConsultationDay, profile.PhoneNumber))
+        var appts = await _appts.GetForUserAsync(userId, ct);
+        return appts.Select(a => Project(a, a.ConsultationDay, (user.PhoneNumber ?? "unknown")))
                     .OrderByDescending(a => a.Date).ThenBy(a => a.SlotIndex)
                     .ToList();
     }
 
-    public async Task CancelAsync(Guid phoneProfileId, Guid appointmentId, CancellationToken ct = default)
+    public async Task CancelAsync(Guid userId, Guid appointmentId, CancellationToken ct = default)
     {
         var appt = await _appts.GetWithDayAsync(appointmentId, ct)
             ?? throw new InvalidOperationException("Booking not found.");
 
-        if (appt.PhoneProfileId != phoneProfileId)
-            throw new UnauthorizedAccessException("That booking belongs to another number.");
+        if (appt.UserId != userId)
+            throw new UnauthorizedAccessException("That booking belongs to another account.");
 
         if (appt.Status == AppointmentStatus.Cancelled)
             throw new InvalidOperationException("That booking is already cancelled.");
@@ -184,9 +187,9 @@ public class AppointmentService : IAppointmentService
         _appts.Update(appt);
         await _uow.SaveChangesAsync(ct);
 
-        var profile = await _phones.GetByIdAsync(phoneProfileId, ct);
-        if (profile is not null)
-            await _notify.SendAsync(profile.PhoneNumber, Channel.WhatsApp, "BookingCancelled", profile.PreferredLanguage, ct);
+        var user = await _users.GetByIdAsync(userId, ct);
+        if (user is not null)
+            await _notify.SendAsync((user.PhoneNumber ?? "unknown"), Channel.WhatsApp, "BookingCancelled", user.PreferredLanguage, ct);
     }
 
     // ----------------------------------------------------------------- admin
@@ -237,8 +240,8 @@ public class AppointmentService : IAppointmentService
         var result = new List<AppointmentDto>();
         foreach (var a in appts.OrderBy(a => a.SlotIndex))
         {
-            var profile = await _phones.GetByIdAsync(a.PhoneProfileId, ct);
-            result.Add(Project(a, day, profile?.PhoneNumber ?? "unknown"));
+            var user = await _users.GetByIdAsync(a.UserId, ct);
+            result.Add(Project(a, day, user?.PhoneNumber ?? "unknown"));
         }
         return result;
     }
@@ -248,8 +251,8 @@ public class AppointmentService : IAppointmentService
         var appt = await _appts.GetWithDayAsync(appointmentId, ct)
             ?? throw new InvalidOperationException("Booking not found.");
 
-        var profile = await _phones.GetByIdAsync(appt.PhoneProfileId, ct)
-            ?? throw new InvalidOperationException("Phone profile not found.");
+        var user = await _users.GetByIdAsync(appt.UserId, ct)
+            ?? throw new InvalidOperationException("User account not found.");
 
         var wasMissed = appt.Status == AppointmentStatus.Missed;
         appt.Status = status;
@@ -257,20 +260,20 @@ public class AppointmentService : IAppointmentService
         // Only a *transition into* Missed counts, so re-saving the same status can't double-count.
         if (status == AppointmentStatus.Missed && !wasMissed)
         {
-            profile.MissedCount++;
-            if (profile.MissedCount >= _opts.MissedBlockThreshold && !profile.IsBlocked)
+            user.MissedCount++;
+            if (user.MissedCount >= _opts.MissedBlockThreshold && !user.IsBlocked)
             {
-                profile.IsBlocked = true;
-                profile.BlockedAt = _clock.UtcNow;
-                await _notify.SendAsync(profile.PhoneNumber, Channel.WhatsApp, "PhoneBlocked", profile.PreferredLanguage, ct);
+                user.IsBlocked = true;
+                user.BlockedAt = _clock.UtcNow;
+                await _notify.SendAsync((user.PhoneNumber ?? "unknown"), Channel.WhatsApp, "PhoneBlocked", user.PreferredLanguage, ct);
             }
-            _phones.Update(profile);
+            _users.Update(user);
         }
 
         _appts.Update(appt);
         await _uow.SaveChangesAsync(ct);
 
-        return Project(appt, appt.ConsultationDay, profile.PhoneNumber);
+        return Project(appt, appt.ConsultationDay, (user.PhoneNumber ?? "unknown"));
     }
 
     // Fallback path: admin pastes a Meet/Zoom link (or a replacement if the call platform changes).
@@ -279,28 +282,28 @@ public class AppointmentService : IAppointmentService
         var appt = await _appts.GetWithDayAsync(appointmentId, ct)
             ?? throw new InvalidOperationException("Booking not found.");
 
-        var profile = await _phones.GetByIdAsync(appt.PhoneProfileId, ct)
-            ?? throw new InvalidOperationException("Phone profile not found.");
+        var user = await _users.GetByIdAsync(appt.UserId, ct)
+            ?? throw new InvalidOperationException("User account not found.");
 
         appt.MeetingLink = meetingLink.Trim();
         _appts.Update(appt);
         await _uow.SaveChangesAsync(ct);
 
-        await _notify.SendAsync(profile.PhoneNumber, Channel.WhatsApp, "MeetingLinkUpdated", profile.PreferredLanguage, ct);
+        await _notify.SendAsync((user.PhoneNumber ?? "unknown"), Channel.WhatsApp, "MeetingLinkUpdated", user.PreferredLanguage, ct);
 
-        return Project(appt, appt.ConsultationDay, profile.PhoneNumber);
+        return Project(appt, appt.ConsultationDay, (user.PhoneNumber ?? "unknown"));
     }
 
     public async Task UnblockPhoneAsync(string phone, CancellationToken ct = default)
     {
         var normalized = PhoneNumber.Normalize(phone);
-        var profile = await _phones.GetByPhoneAsync(normalized, ct)
-            ?? throw new InvalidOperationException("No profile exists for that number.");
+        var user = await _users.GetByPhoneAsync(normalized, ct)
+            ?? throw new InvalidOperationException("No account exists for that number.");
 
-        profile.IsBlocked = false;
-        profile.BlockedAt = null;
-        profile.MissedCount = 0;
-        _phones.Update(profile);
+        user.IsBlocked = false;
+        user.BlockedAt = null;
+        user.MissedCount = 0;
+        _users.Update(user);
         await _uow.SaveChangesAsync(ct);
     }
 

@@ -1,10 +1,13 @@
 using System.Text;
 using System.Text.Json.Serialization;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
+using Microsoft.AspNetCore.Identity;
 using Microsoft.IdentityModel.Tokens;
 using Microsoft.OpenApi.Models;
 using TRC.Application.Common;
 using TRC.Application.Options;
+using TRC.Domain.Entities;
+using TRC.Domain.Enums;
 using TRC.API.Controllers;
 using TRC.API.Middleware;
 using TRC.Infrastructure.Auth;
@@ -16,7 +19,7 @@ var builder = WebApplication.CreateBuilder(args);
 builder.Services.Configure<TaxRateOptions>(builder.Configuration.GetSection(TaxRateOptions.SectionName));
 builder.Services.Configure<VarianceOptions>(builder.Configuration.GetSection(VarianceOptions.SectionName));
 builder.Services.Configure<BookingOptions>(builder.Configuration.GetSection(BookingOptions.SectionName));
-builder.Services.Configure<OtpOptions>(builder.Configuration.GetSection(OtpOptions.SectionName));
+builder.Services.Configure<AuthDevOptions>(builder.Configuration.GetSection(AuthDevOptions.SectionName));
 
 // ---- Application + Infrastructure layers ----
 builder.Services.AddApplication();
@@ -40,13 +43,7 @@ builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
                     ? "dev-only-insecure-key-change-me-32chars!!" : jwt.Key)),
         };
     });
-builder.Services.AddAuthorization(o =>
-{
-    // Phone tokens (minted at OTP verify) carry scope=phone and NO role claim, so they can
-    // satisfy this policy and nothing else. Staff tokens carry a role and no scope.
-    o.AddPolicy(AppointmentsController.PhonePolicy, p =>
-        p.RequireAuthenticatedUser().RequireClaim("scope", "phone"));
-});
+builder.Services.AddAuthorization();
 
 // ---- CORS (allow the Vercel frontend + local dev; preview URLs are wildcarded) ----
 const string CorsPolicy = "trc-web";
@@ -83,6 +80,16 @@ builder.Services.AddSwaggerGen(c =>
 });
 
 var app = builder.Build();
+
+
+// ---- Seed Identity roles (idempotent) ----
+using (var scope = app.Services.CreateScope())
+{
+    var roleMgr = scope.ServiceProvider.GetRequiredService<RoleManager<IdentityRole<Guid>>>();
+    foreach (var role in Enum.GetNames<UserRole>())
+        if (!await roleMgr.RoleExistsAsync(role))
+            await roleMgr.CreateAsync(new IdentityRole<Guid>(role));
+}
 
 app.UseMiddleware<ExceptionMiddleware>();
 

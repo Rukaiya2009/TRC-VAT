@@ -3,20 +3,27 @@ using TRC.Application.DTOs;
 
 namespace TRC.Application.Validators;
 
-public class SendOtpRequestValidator : AbstractValidator<SendOtpRequest>
+public class RegisterRequestValidator : AbstractValidator<RegisterRequest>
 {
-    public SendOtpRequestValidator()
+    public RegisterRequestValidator()
     {
+        RuleFor(x => x.Email).NotEmpty().EmailAddress();
+        RuleFor(x => x.Password).NotEmpty().MinimumLength(8)
+            .Matches("[A-Z]").WithMessage("Password needs an uppercase letter.")
+            .Matches("[0-9]").WithMessage("Password needs a digit.");
+        RuleFor(x => x.FullName).NotEmpty().MaximumLength(200);
         RuleFor(x => x.Phone).NotEmpty().WithMessage("Phone number is required.");
     }
 }
 
-public class VerifyOtpRequestValidator : AbstractValidator<VerifyOtpRequest>
+public class ResetPasswordRequestValidator : AbstractValidator<ResetPasswordRequest>
 {
-    public VerifyOtpRequestValidator()
+    public ResetPasswordRequestValidator()
     {
-        RuleFor(x => x.Phone).NotEmpty();
-        RuleFor(x => x.Code).NotEmpty().Matches(@"^\d{4,8}$").WithMessage("Enter the numeric code you received.");
+        RuleFor(x => x.Email).NotEmpty().EmailAddress();
+        RuleFor(x => x.Token).NotEmpty();
+        RuleFor(x => x.NewPassword).NotEmpty().MinimumLength(8)
+            .Matches("[A-Z]").Matches("[0-9]");
     }
 }
 

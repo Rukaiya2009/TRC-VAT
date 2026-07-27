@@ -4,7 +4,6 @@ namespace TRC.Domain.Entities;
 public class BusinessPeriodData : BaseEntity
 {
     public Guid? UserId { get; set; }
-    public Guid? PhoneProfileId { get; set; }
     public int Year { get; set; }
     public int Month { get; set; }
     public decimal TotalSales { get; set; }

@@ -2,7 +2,8 @@ using TRC.Domain.Entities;
 
 namespace TRC.Domain.Repositories;
 
-// Generic repository abstraction (implemented in Infrastructure).
+// Generic repo for BaseEntity-derived aggregates. NOTE: User is NOT a BaseEntity anymore
+// (it's an IdentityUser), so it has its own repository below.
 public interface IRepository<T> where T : BaseEntity
 {
     Task<T?> GetByIdAsync(Guid id, CancellationToken ct = default);
@@ -14,7 +15,6 @@ public interface IRepository<T> where T : BaseEntity
 
 public interface IImportRepository : IRepository<Import>
 {
-    // Includes TaxBreakdowns + latest RiskAssessment for report/assess flows.
     Task<Import?> GetWithDetailsAsync(Guid id, CancellationToken ct = default);
     Task<IReadOnlyList<Import>> GetHistoryForConsigneeAsync(string consignee, CancellationToken ct = default);
 }
@@ -25,21 +25,13 @@ public interface IRiskRuleRepository : IRepository<RiskRule>
     Task<RiskRule?> GetByCodeAsync(string code, CancellationToken ct = default);
 }
 
-public interface IUserRepository : IRepository<User>
+// Standalone (User is an IdentityUser, not a BaseEntity). Auth itself uses UserManager;
+// this is for booking-side reads/writes of the User's block state and contact info.
+public interface IUserRepository
 {
-    Task<User?> GetByEmailAsync(string email, CancellationToken ct = default);
-}
-
-public interface IPhoneProfileRepository : IRepository<PhoneProfile>
-{
-    Task<PhoneProfile?> GetByPhoneAsync(string normalizedPhone, CancellationToken ct = default);
-}
-
-public interface IOtpCodeRepository : IRepository<OtpCode>
-{
-    // Newest unverified, unexpired code for this phone.
-    Task<OtpCode?> GetActiveAsync(Guid phoneProfileId, DateTime nowUtc, CancellationToken ct = default);
-    Task<int> CountSentSinceAsync(Guid phoneProfileId, DateTime sinceUtc, CancellationToken ct = default);
+    Task<User?> GetByIdAsync(Guid id, CancellationToken ct = default);
+    Task<User?> GetByPhoneAsync(string normalizedPhone, CancellationToken ct = default);
+    void Update(User user);
 }
 
 public interface IConsultationDayRepository : IRepository<ConsultationDay>
@@ -52,11 +44,10 @@ public interface IConsultationDayRepository : IRepository<ConsultationDay>
 public interface IAppointmentRepository : IRepository<Appointment>
 {
     Task<Appointment?> GetWithDayAsync(Guid id, CancellationToken ct = default);
-    Task<IReadOnlyList<Appointment>> GetForPhoneAsync(Guid phoneProfileId, CancellationToken ct = default);
+    Task<IReadOnlyList<Appointment>> GetForUserAsync(Guid userId, CancellationToken ct = default);
     Task<IReadOnlyList<Appointment>> GetForDayAsync(Guid consultationDayId, CancellationToken ct = default);
 }
 
-// Commits changes across repositories in one transaction.
 public interface IUnitOfWork
 {
     Task<int> SaveChangesAsync(CancellationToken ct = default);

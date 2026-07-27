@@ -32,17 +32,17 @@ public interface IImportService
 
 public interface IAuthService
 {
-    Task<AuthResult> RegisterAsync(RegisterRequest request, CancellationToken ct = default);
+    Task<RegisterResult> RegisterProspectAsync(RegisterRequest request, CancellationToken ct = default);
     Task<AuthResult?> LoginAsync(LoginRequest request, CancellationToken ct = default);
     Task<AuthResult?> RefreshAsync(string refreshToken, CancellationToken ct = default);
+    Task<bool> ConfirmEmailAsync(ConfirmEmailRequest request, CancellationToken ct = default);
+    Task<string?> ResendConfirmationAsync(string email, CancellationToken ct = default);
+    Task<string?> ForgotPasswordAsync(string email, CancellationToken ct = default);
+    Task<bool> ResetPasswordAsync(ResetPasswordRequest request, CancellationToken ct = default);
+    Task<AuthResult> CreateStaffAsync(CreateStaffRequest request, CancellationToken ct = default);
 }
 
 // M9 — phone verification. Gates the booking funnel (FR-9.1/9.2).
-public interface IOtpService
-{
-    Task<SendOtpResult> SendAsync(SendOtpRequest request, CancellationToken ct = default);
-    Task<VerifyOtpResult> VerifyAsync(VerifyOtpRequest request, CancellationToken ct = default);
-}
 
 // M11 — consultation days + appointment booking.
 public interface IAppointmentService
@@ -51,9 +51,9 @@ public interface IAppointmentService
     Task<IReadOnlyList<ConsultationDayDto>> GetAvailabilityAsync(CancellationToken ct = default);
 
     // Prospect (requires a verified phone token).
-    Task<AppointmentDto> BookAsync(Guid phoneProfileId, BookAppointmentRequest request, CancellationToken ct = default);
-    Task<IReadOnlyList<AppointmentDto>> GetMineAsync(Guid phoneProfileId, CancellationToken ct = default);
-    Task CancelAsync(Guid phoneProfileId, Guid appointmentId, CancellationToken ct = default);
+    Task<AppointmentDto> BookAsync(Guid userId, BookAppointmentRequest request, CancellationToken ct = default);
+    Task<IReadOnlyList<AppointmentDto>> GetMineAsync(Guid userId, CancellationToken ct = default);
+    Task CancelAsync(Guid userId, Guid appointmentId, CancellationToken ct = default);
 
     // Admin.
     Task<ConsultationDayDto> PublishDayAsync(CreateConsultationDayRequest request, CancellationToken ct = default);
