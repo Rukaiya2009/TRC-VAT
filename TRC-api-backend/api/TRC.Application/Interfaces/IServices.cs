@@ -55,11 +55,16 @@ public interface IAppointmentService
     Task<IReadOnlyList<AppointmentDto>> GetMineAsync(Guid userId, CancellationToken ct = default);
     Task CancelAsync(Guid userId, Guid appointmentId, CancellationToken ct = default);
 
+    // Self-reschedule: allowed until ProspectRescheduleLeadHours before the current slot.
+    Task<AppointmentDto> RescheduleAsync(Guid userId, Guid appointmentId, RescheduleAppointmentRequest request, CancellationToken ct = default);
+
     // Admin.
     Task<ConsultationDayDto> PublishDayAsync(CreateConsultationDayRequest request, CancellationToken ct = default);
     Task<ConsultationDayDto> CloseDayAsync(Guid consultationDayId, CancellationToken ct = default);
     Task<IReadOnlyList<AppointmentDto>> GetForDayAsync(Guid consultationDayId, CancellationToken ct = default);
     Task<AppointmentDto> SetStatusAsync(Guid appointmentId, AppointmentStatus status, CancellationToken ct = default);
+    // Staff reschedule on a client's behalf: allowed until AdminRescheduleLeadHours before the slot.
+    Task<AppointmentDto> RescheduleAsAdminAsync(Guid appointmentId, RescheduleAppointmentRequest request, CancellationToken ct = default);
     Task<AppointmentDto> SetMeetingLinkAsync(Guid appointmentId, string meetingLink, CancellationToken ct = default);
     Task UnblockPhoneAsync(string phone, CancellationToken ct = default);
 }

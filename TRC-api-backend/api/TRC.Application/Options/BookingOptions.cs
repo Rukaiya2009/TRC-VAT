@@ -18,6 +18,12 @@ public class BookingOptions
     public string[] ClosedWeekdays { get; set; } = { "Friday" };
     public int MissedBlockThreshold { get; set; } = 3;
 
+    // Reschedule lead times (hours before the slot's own start, Asia/Dhaka).
+    // Prospects lose the ability to MOVE a booking 6h out — they can still cancel.
+    // Staff keep a tighter 1h window so they can accommodate a late phone call.
+    public double ProspectRescheduleLeadHours { get; set; } = 6;
+    public double AdminRescheduleLeadHours { get; set; } = 1;
+
     // Fallback link used until Google Calendar/Meet automation lands (see IMeetingLinkProvider).
     public string? DefaultMeetingLink { get; set; }
 

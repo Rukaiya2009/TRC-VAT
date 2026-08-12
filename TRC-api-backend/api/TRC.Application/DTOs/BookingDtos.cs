@@ -36,6 +36,9 @@ public record CreateConsultationDayRequest(
     int? SessionMinutes,
     int? BufferMinutes);
 
+// M11 — move an existing booking to a different day/slot (admin or the owner).
+public record RescheduleAppointmentRequest(Guid ConsultationDayId, int SlotIndex);
+
 public record UpdateAppointmentStatusRequest(AppointmentStatus Status);
 
 public record UpdateMeetingLinkRequest(string MeetingLink);

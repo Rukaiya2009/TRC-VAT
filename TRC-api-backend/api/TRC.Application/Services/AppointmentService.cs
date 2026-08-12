@@ -192,6 +192,127 @@ public class AppointmentService : IAppointmentService
             await _notify.SendAsync((user.PhoneNumber ?? "unknown"), Channel.WhatsApp, "BookingCancelled", user.PreferredLanguage, ct);
     }
 
+    // ----------------------------------------------------------------- reschedule
+
+    // Moving a booking is deliberately NOT cancel-then-rebook: the row is reused, so
+    // BookingOrder and the user's MissedCount are untouched (a reschedule is not a no-show).
+    // Lead time is measured from the CURRENT slot's start, in Asia/Dhaka:
+    //   • prospect: 6h  — after that they can only cancel
+    //   • staff:    1h  — and staff may also move a booking past the 12:00 same-day cutoff
+    public Task<AppointmentDto> RescheduleAsync(Guid userId, Guid appointmentId, RescheduleAppointmentRequest request, CancellationToken ct = default)
+        => MoveAsync(appointmentId, request, userId, _opts.ProspectRescheduleLeadHours, ct);
+
+    public Task<AppointmentDto> RescheduleAsAdminAsync(Guid appointmentId, RescheduleAppointmentRequest request, CancellationToken ct = default)
+        => MoveAsync(appointmentId, request, null, _opts.AdminRescheduleLeadHours, ct);
+
+    private async Task<AppointmentDto> MoveAsync(
+        Guid appointmentId,
+        RescheduleAppointmentRequest request,
+        Guid? actingUserId,                 // null => staff acting on the client's behalf
+        double leadHours,
+        CancellationToken ct)
+    {
+        var isSelf = actingUserId is not null;
+
+        var appt = await _appts.GetWithDayAsync(appointmentId, ct)
+            ?? throw new InvalidOperationException("Booking not found.");
+
+        // Ownership comes from the token, never the body (same rule as CancelAsync).
+        if (actingUserId is Guid uid && appt.UserId != uid)
+            throw new UnauthorizedAccessException("That booking belongs to another account.");
+
+        if (appt.Status == AppointmentStatus.Cancelled)
+            throw new InvalidOperationException("That booking is cancelled. Please make a new booking instead.");
+
+        if (appt.Status is AppointmentStatus.Completed or AppointmentStatus.Missed)
+            throw new InvalidOperationException("That booking has already been closed and can no longer be moved.");
+
+        var user = await _users.GetByIdAsync(appt.UserId, ct)
+            ?? throw new InvalidOperationException("User account not found.");
+
+        if (isSelf && user.IsBlocked)
+            throw new InvalidOperationException(
+                "This account has been blocked after repeated missed appointments. Please contact TRC directly.");
+
+        var currentDay = appt.ConsultationDay;
+
+        // --- lead-time gate on the slot they currently hold -------------------------------
+        var currentStartUtc = _clock.ToUtc(currentDay.Date, appt.AssignedStart ?? currentDay.WindowStart);
+        if (_clock.UtcNow >= currentStartUtc.AddHours(-leadHours))
+            throw new InvalidOperationException(isSelf
+                ? $"Rescheduling closes {Hours(leadHours)} before your slot. You can still cancel this booking, or contact TRC for help."
+                : $"This slot starts in under {Hours(leadHours)}, so it can no longer be moved.");
+
+        // --- target day ------------------------------------------------------------------
+        var targetDay = appt.ConsultationDayId == request.ConsultationDayId
+            ? currentDay
+            : await _days.GetByIdAsync(request.ConsultationDayId, ct)
+              ?? throw new InvalidOperationException("That consultation day does not exist.");
+
+        if (!targetDay.IsPublished)
+            throw new InvalidOperationException("That day is closed for bookings.");
+
+        if (targetDay.Date < _clock.Today)
+            throw new InvalidOperationException("That date has passed.");
+
+        // Prospects are held to the normal booking rules (incl. the 12:00 same-day cutoff);
+        // staff are intentionally allowed past the cutoff so they can fix things day-of.
+        if (isSelf)
+        {
+            var (bookable, reason) = Bookability(targetDay);
+            if (!bookable) throw new InvalidOperationException(reason!);
+        }
+
+        if (request.SlotIndex < 0 || request.SlotIndex >= targetDay.MaxBookings)
+            throw new InvalidOperationException("That slot does not exist on this day.");
+
+        if (targetDay.Id == appt.ConsultationDayId && request.SlotIndex == appt.SlotIndex)
+            throw new InvalidOperationException("This booking is already in that slot.");
+
+        var (start, end) = SlotTimes(targetDay, request.SlotIndex);
+        var newStartUtc = _clock.ToUtc(targetDay.Date, start);
+
+        // The slot they move INTO must also respect the same lead time.
+        if (newStartUtc < _clock.UtcNow.AddHours(leadHours))
+            throw new InvalidOperationException(
+                $"That slot starts too soon — please pick one at least {Hours(leadHours)} from now.");
+
+        var onTarget = await _appts.GetForDayAsync(targetDay.Id, ct);
+        var live = onTarget.Where(a => a.Status != AppointmentStatus.Cancelled && a.Id != appt.Id).ToList();
+
+        if (live.Any(a => a.SlotIndex == request.SlotIndex))
+            throw new InvalidOperationException("That slot has just been taken. Please choose another.");
+
+        if (live.Any(a => a.UserId == appt.UserId))
+            throw new InvalidOperationException("This account already has another booking on that day.");
+
+        // --- move it ---------------------------------------------------------------------
+        appt.ConsultationDayId = targetDay.Id;
+        appt.SlotIndex = request.SlotIndex;
+        appt.AssignedStart = start;
+        appt.AssignedEnd = end;
+        // BookingOrder, Status and MissedCount deliberately unchanged.
+
+        // Manual provider hands back the configured fallback link; keep the existing one if
+        // it returns null so a link an admin pasted in by hand isn't silently wiped.
+        var link = await _links.CreateAsync(
+            newStartUtc,
+            _clock.ToUtc(targetDay.Date, end),
+            $"TRC VAT Consultation — {targetDay.Date:yyyy-MM-dd} {start:HH\:mm}",
+            ct);
+        if (!string.IsNullOrWhiteSpace(link)) appt.MeetingLink = link;
+
+        _appts.Update(appt);
+        await _uow.SaveChangesAsync(ct);
+
+        await _notify.SendAsync((user.PhoneNumber ?? "unknown"), Channel.WhatsApp, "BookingRescheduled", user.PreferredLanguage, ct);
+
+        return Project(appt, targetDay, (user.PhoneNumber ?? "unknown"));
+    }
+
+    private static string Hours(double h) =>
+        Math.Abs(h - 1) < 0.001 ? "1 hour" : $"{h:0.##} hours";
+
     // ----------------------------------------------------------------- admin
 
     public async Task<ConsultationDayDto> PublishDayAsync(CreateConsultationDayRequest request, CancellationToken ct = default)

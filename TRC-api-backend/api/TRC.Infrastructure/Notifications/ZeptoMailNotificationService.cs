@@ -71,6 +71,7 @@ public class ZeptoMailNotificationService : INotificationService
         "PasswordReset"     => ("Reset your TRC password", "<p>Use the link we provided to reset your password.</p>"),
         "BookingConfirmed"  => ("Your TRC consultation is booked", "<p>Your consultation is confirmed. Details are in the app.</p>"),
         "MeetingLinkUpdated"=> ("Your TRC meeting link", "<p>Your meeting link is ready. See the app for details.</p>"),
+        "BookingRescheduled"=> ("Your TRC consultation was moved", "<p>Your consultation has been rescheduled. The new date and time are in the app.</p>"),
         "BookingCancelled"  => ("Your TRC booking was cancelled", "<p>Your booking has been cancelled.</p>"),
         "PhoneBlocked"      => ("TRC booking access paused", "<p>Your booking access has been paused. Please contact TRC.</p>"),
         _                   => ("TRC notification", "<p>You have a new notification from TRC.</p>"),

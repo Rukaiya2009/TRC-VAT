@@ -43,7 +43,21 @@ public class AppointmentsController : ControllerBase
         return Ok(ApiResponse<object>.Ok(new { message = "Booking cancelled." }));
     }
 
+    // Self-reschedule. Closes 6h before the slot (config: Booking:ProspectRescheduleLeadHours);
+    // after that the prospect can only cancel.
+    [Authorize(Roles = "Prospect")]
+    [HttpPut("{id:guid}/reschedule")]
+    public async Task<IActionResult> Reschedule(Guid id, RescheduleAppointmentRequest req, CancellationToken ct)
+        => Ok(ApiResponse<AppointmentDto>.Ok(await _appointments.RescheduleAsync(UserId, id, req, ct)));
+
     // ---------------------------------------------------------------- admin
+
+    // Staff reschedule on a client's behalf. Tighter 1h lead time, and allowed past the
+    // same-day 12:00 booking cutoff (config: Booking:AdminRescheduleLeadHours).
+    [Authorize(Roles = "Admin,Auditor")]
+    [HttpPut("{id:guid}/admin-reschedule")]
+    public async Task<IActionResult> AdminReschedule(Guid id, RescheduleAppointmentRequest req, CancellationToken ct)
+        => Ok(ApiResponse<AppointmentDto>.Ok(await _appointments.RescheduleAsAdminAsync(id, req, ct)));
 
     // Marking Missed increments the phone's miss count; the 3rd one blocks the number.
     [Authorize(Roles = "Admin,Auditor")]
