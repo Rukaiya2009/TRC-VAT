@@ -298,7 +298,7 @@ public class AppointmentService : IAppointmentService
         var link = await _links.CreateAsync(
             newStartUtc,
             _clock.ToUtc(targetDay.Date, end),
-            $"TRC VAT Consultation — {targetDay.Date:yyyy-MM-dd} {start:HH\:mm}",
+            $"TRC VAT Consultation — {targetDay.Date:yyyy-MM-dd} {start:HH\\:mm}",
             ct);
         if (!string.IsNullOrWhiteSpace(link)) appt.MeetingLink = link;
 
