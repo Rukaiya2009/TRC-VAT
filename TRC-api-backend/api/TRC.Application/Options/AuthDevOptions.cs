@@ -5,5 +5,5 @@ namespace TRC.Application.Options;
 public class AuthDevOptions
 {
     public const string SectionName = "AuthDev";
-    public bool DevReturnTokens { get; set; } = true;
+    public bool DevReturnTokens { get; set; } = false;
 }
